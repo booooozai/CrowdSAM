@@ -15,7 +15,6 @@ from torchvision.ops.boxes import box_area
 
 from PIL import Image
 from matplotlib import pyplot as plt
-from .coco_names import coco_classes
 from itertools import product
 import argparse
 import yaml
@@ -23,11 +22,7 @@ import yaml
 # from reliability.Fitters import Fit_Weibull_Mixture
 #general utils
 # data_meta = [dataset_path, n_class, categories]
-data_meta = {'crowdhuman':["./datasets/crowdhuman", 1, {1:'person'}],
-             'occhuman':["./datasets/OCHuman", 1, {1:'person'}],
-             'coco_occ':["./datasets/coco", 80, coco_classes],
-             'coco':["./datasets/occ_coco", 80, coco_classes], 
-             }
+
 def load_config(config_file):
     with open(config_file, 'r') as file:
         config = yaml.safe_load(file)
@@ -72,7 +67,10 @@ def visualize_result(image, result, class_names, save_path,  vis_masks=True, con
     #convert image from PIL to numpy 
     image = np.array(image)
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-
+    if len(result['boxes']) == 0:
+        cv2.imwrite(save_path,image)
+        print(' No boxes detected', save_path)
+        return
     #decode masks here    
     if vis_masks:
         masks = torch.tensor(np.array([coco_decode_rle(rles) for rles in result['rles']]))
@@ -91,7 +89,8 @@ def visualize_result(image, result, class_names, save_path,  vis_masks=True, con
             color = [0,0,255]
         else:
             color = [255,255,0] 
-        class_name =class_names[class_id+1]
+        #  Class names start with 1. Class indexes start with 0. Plus 1 to padding. 
+        class_name =class_names[class_id+1] 
         image = draw_box(image, box,f"{class_name}:{score}",color=color)
         if vis_masks:
             image = draw_mask(image, masks[i], random_color=True)

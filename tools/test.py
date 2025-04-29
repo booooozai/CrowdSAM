@@ -6,8 +6,8 @@ from tqdm import tqdm
 import numpy as np
 import torch
 from crowdsam.model import CrowdSAM
-from crowdsam.utils import (load_img_and_annotation, setup_logger,
-                   data_meta, load_config, modify_config,
+from crowdsam.data import data_meta
+from crowdsam.utils import (load_img_and_annotation, setup_logger, load_config, modify_config,
                    visualize_result,evaluate_boxes)
 import argparse
 def envrion_init():
