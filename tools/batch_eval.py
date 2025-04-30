@@ -129,8 +129,8 @@ def main():
         eval_cmd = f"python tools/coco_eval.py -d test.json -g {config['data']['json_file']}"
         print(f"Evaluating with command: {eval_cmd}")
     print(f"Evaluating with command: {eval_cmd}")
-    result = subprocess.run(eval_cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)  
-    print(result.stdout)
+    result = subprocess.run(eval_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)  
+    print(result.stdout.decode())
     # os.remove("test.json")
     print("All processes done")
     print('Elapsed time:', time.time() - t0)
