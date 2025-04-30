@@ -16,6 +16,7 @@
 ---
 
 ## 📢 Latest Updates
+- **May-30-25**: We update COCO supporting code.
 - **Aug-1-24**: We open source the code, models.🔥🔥
 - **Jul-20-24**: Crowd-SAM paper is released [arxiv link](https://arxiv.org/abs/2407.11464). 🔥🔥
 - **Jul-1-24**: Crowd-SAM has been accepted to **ECCV-24** 🎉. 
