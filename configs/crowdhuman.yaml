@@ -6,7 +6,7 @@ data:
   dataset: "crowdhuman"
   dataset_root: "./dataset/crowdhuman"
   json_file: "./dataset/crowdhuman/val_visible.json"
-  train_file: "./dataset/crowdhuman/train_crowdhuman_10shot.json"
+  train_file: "./crowdhuman_train/train_crowdhuman_10shot.json"
   odgt_file: "./dataset/crowdhuman/annotation_val.odgt"
 model:
   dino_repo: "./dinov2"
