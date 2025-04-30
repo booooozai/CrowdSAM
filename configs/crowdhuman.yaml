@@ -6,7 +6,7 @@ data:
   dataset: "crowdhuman"
   dataset_root: "./dataset/crowdhuman"
   json_file: "./dataset/crowdhuman/minival_visible.json"
-  train_file: "/train_crowdhuman_10shot.json"
+  train_file: "./crowdhuman_train/train_crowdhuman_10shot.json"
   odgt_file: "./dataset/crowdhuman/annotation_val.odgt"
 model:
   dino_repo: "./dinov2"
@@ -27,7 +27,7 @@ train:
   neg_samples_per_batch: 90
   neg_factor: 1
   steps: 2000
-  lr: 0.0001
+  lr: 0.00001 #1e-5
   optimizer: "adamw"
   weight_decay: 0.0001
   save_path: "adapter_weights/10_shot.pth"
