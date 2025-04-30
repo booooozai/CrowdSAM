@@ -348,10 +348,11 @@ class CrowdSAM():
             return_logits=True,
         )[:3]
         # iou_preds = iou_preds * cls_scores.sigmoid().squeeze(2)
-        iou_preds = torch.clamp(iou_preds, 0.) * cls_scores.squeeze(2).sigmoid() 
+        iou_preds = torch.clamp(iou_preds, 0.)
         indices = self.select_mask(masks, iou_preds)
         if not self.train_free:
             conf, categories = cls_scores.max(dim=-1)
+            iou_preds  = iou_preds * conf.sigmoid()
             masks, iou_preds, points, categories = masks[indices], iou_preds[indices], torch.as_tensor(points.repeat(1, axis=0)), categories[indices]
         else:
             masks, iou_preds, points,  = masks[indices], iou_preds[indices], torch.as_tensor(points.repeat(1, axis=0))
