@@ -366,28 +366,6 @@ def show_box(box,  ax, color='green', score=None, ):
     w, h = box[2] - box[0], box[3] - box[1]
     ax.add_patch(plt.Rectangle((x0, y0), w, h, edgecolor=color, facecolor=(0,0,0,0), lw=2))    
 
-def load_img_and_annotation(dataset_path, annots, dataset, id=0):
-    img_meta = annots['images'][id]
-    if dataset=='crowdhuman':
-        img_path = os.path.join(dataset_path,'Images', img_meta['file_name'])
-    elif dataset == 'coco':
-        img_path = os.path.join(dataset_path,'val2017', img_meta['file_name'])
-    elif dataset == 'coco_occ':
-        img_path = os.path.join(dataset_path,'occ2017', img_meta['file_name'].split('/')[-1])
-    elif dataset == 'occhuman':
-        img_path = os.path.join(dataset_path,'images', img_meta['file_name'])
-    elif dataset == 'mineapple':
-        img_path = os.path.join(dataset_path,'images', img_meta['file_name'])
-    else:
-        raise NotImplementedError
-    #load image
-    image_cv = cv2.imread(img_path)
-    image_cv = cv2.cvtColor(image_cv, cv2.COLOR_BGR2RGB)
-    bboxes = np.array([ annot['bbox'] for annot in annots['annotations'] if annot['image_id'] ==img_meta['id']])
-    bboxes[...,2:] += bboxes[...,:2]
-    img_id = img_meta['id']    
-    return image_cv, bboxes, img_id 
-
 def is_validbox(box):
     #[x_1,y_1,x_2,y_2]
     return box[2] > box[0] and box[3] > box[1]

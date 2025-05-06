@@ -73,12 +73,10 @@ def cache_feature_crowdhuman(train_dataloader, sam, max_steps=100, feat_size=40,
         # Select one image for training
         image = imgs[0]
         image_np = np.array(image)
-        target_boxes = target_boxes[0] 
+        target_boxes = torch.tensor(target_boxes[0])
         img_height, img_width = image_np.shape[:2]
 
         # Scale the target boxes to the image dimensions
-        scale = torch.tensor([img_width, img_height, img_width, img_height]).unsqueeze(0)
-        target_boxes = target_boxes * scale
 
         # Set the image in the SAM model
         sam.set_image(image_np)

@@ -7,8 +7,9 @@ import numpy as np
 import torch
 from crowdsam.model import CrowdSAM
 from crowdsam.data import data_meta
-from crowdsam.utils import (load_img_and_annotation, setup_logger, load_config, modify_config,
+from crowdsam.utils import (setup_logger, load_config, modify_config,
                    visualize_result,evaluate_boxes)
+from crowdsam.data import COCODataset,CrowdHuman
 import argparse
 def envrion_init():
     parser = argparse.ArgumentParser(description="CrowdSAM argparser")
@@ -47,32 +48,32 @@ if __name__ == '__main__':
     #===========>configure model
     model = CrowdSAM(config, logger)
     # annot_path = os.path.join(dataset_path[args.dataset], args.label_file)
-    annot_path = config['data']['json_file']
+    #===========>run in loop and collect result
+    output_content = []
+    data_root = config['data']['dataset_root']
+    valset_path = os.path.join(data_root,  config['data']['val_set'])
+    val_json_path = os.path.join(data_root, config['data']['val_file'])
+    if config['data']['dataset'] == 'coco':
+        dataset = COCODataset( valset_path, val_json_path, transform=None)
+    elif config['data']['dataset'] == 'crowdhuman':
+        dataset = COCODataset(valset_path, val_json_path, transform=None)
     #===========> A simple data loading strategy that can be replaced with a DDP dataloader in the future update.
     logger.info('load images and annotations from crowdhuman dataset..')
-    annots = json.load(open(annot_path))
+    annots = json.load(open(val_json_path))
     if args.end_idx == -1:
         end_idx = len(annots['images'])
     else:
         end_idx = min(args.end_idx, len(annots['images']))
     image_ids = [ i for i in range(args.start_idx,end_idx)]
-    #===========>run in loop and collect result
-    output_content = []
-    logger.info(f'total images  to process { len(image_ids)}')
-    for id_ in tqdm(image_ids):
-        logger.debug(f'start processing {id_}')
+    for i in tqdm(image_ids):
         # load one image
-        image, gt_boxes, image_id = load_img_and_annotation(dataset_path, annots, config['data']['dataset'], id_)
-        result = model.generate(image)
-        # AP, recall, = round(AP, 3), round(recall, 3)
-        # FP_ind, FN_ind = None, None
-        instance_dict = {'image_id':image_id,  'num_gt':len(gt_boxes)-1}
-        # instance_dict.update({'AP':AP, 'Recall':recall, })    
+        sample =  dataset.__getitem__(i)
+        result = model.generate(sample['image'])
+        instance_dict = {'image_id':sample['image_id']}
         instance_dict.update({k:v.tolist() for k,v in result.items() if k in ['boxes', 'scores', 'categories'] })
         instance_dict.update({k:v for k,v in result.items() if k in ['rles'] })
         # save detection results in json 
         output_content.append(instance_dict)
-        logger.debug(f'process for image:{id_} is done')
         # visualize the detected objects
         if args.visualize:
             save_path = os.path.join(config['environ']['output_dir'], f'{id_}.jpg')
@@ -80,6 +81,8 @@ if __name__ == '__main__':
             FP_list, FN_list = evaluate_boxes(result['boxes'], result['scores'], gt_boxes, 0.5)[2:]
             visualize_result(image, result,  class_names, save_path, conf_thresh= config['vis']['vis_thresh'], FP_ind=FP_list, FN_ind=FN_list, vis_masks=args.mode=='seg')#,  FP_ind = FP_ind, FN_ind = FN_ind)
         del result        
+        logger.debug(f'process for image:{i} is done')
+
 
     if args.save_path == "":
         file_path = os.path.join(config['environ']['output_dir'],'result.json')

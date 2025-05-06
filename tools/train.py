@@ -14,7 +14,7 @@ import sys
 from segment_anything_cs import sam_model_registry, SamPredictor
 from loguru import logger
 import crowdsam.utils as utils
-from crowdsam.data import COCODataset, collate_fn_coco, CrowdHuman, collate_fn_crowdhuman
+from crowdsam.data import COCODataset, collate_fn_coco, collate_fn_crowdhuman
 from crowdsam.engine import train_loop
 
 
@@ -55,12 +55,16 @@ if __name__ == '__main__':
     optimizer = torch.optim.AdamW(params= learnable_params,
                                   lr= config['train']['lr'], weight_decay= config['train']['weight_decay'])
     # prompts = generate_prompts(patch_h, patch_w).cuda()
+    data_root = config['data']['dataset_root']
+    train_set_split = config['data']['train_set']
+    trainset_path = os.path.join(data_root, train_set_split)
+    train_json_path = os.path.join(data_root, config['data']['train_file'])
     if config['data']['dataset'] == 'coco':
         torch.nn.init.constant_(predictor.model.mask_decoder.point_classifier.layers[-1].bias,-5)
-        dataset = COCODataset(image_directory=config['data']['dataset_root'], annotation_file=config['data']['train_file'], transform=T.ToTensor())
+        dataset = COCODataset( trainset_path, train_json_path,)
         train_dataloader = torch.utils.data.DataLoader(dataset, 1, shuffle=True, num_workers=1, drop_last=False,collate_fn=collate_fn_coco)
     elif config['data']['dataset'] == 'crowdhuman':
-        dataset = CrowdHuman(config['data']['dataset_root'], config['data']['train_file'], transform=T.ToTensor())
+        dataset = COCODataset( trainset_path, train_json_path)
         train_dataloader = torch.utils.data.DataLoader(dataset, 1, shuffle=True, num_workers=1, drop_last=False,collate_fn=collate_fn_crowdhuman)
 
     loss_type = 'coco' if config['data']['dataset'] == 'coco' else 'crowdhuman'

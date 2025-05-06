@@ -86,16 +86,17 @@ def main():
     parser.add_argument('-c','--config_file', default='./configs/crowdhuman.yaml')
     parser.add_argument('options', nargs=argparse.REMAINDER)
     args = parser.parse_args()
+    exec_file = 'tools/test.py'
+
     config = utils.load_config(args.config_file)
     config = utils.modify_config(config, args.options)
     print(yaml.dump(config, default_flow_style=False, default_style='' ))
     #load yaml
-    gt_js = json.load(open(config['data']['json_file']))
+    val_json_path = os.path.join(config['data']['dataset_root'], config['data']['val_file'])
+    with open(val_json_path) as f:
+        gt_js = json.load(f)
     num_imgs = len(gt_js['images'])
     num_nodes = args.num_nodes
-    annot_file = config['data']['json_file']
-    odgt_file = config['data']['odgt_file']
-    exec_file = 'tools/test.py'
     config_file = args.config_file
     options = args.options
     t0 = time.time()
@@ -120,13 +121,14 @@ def main():
     if config['data']['dataset'] == 'crowdhuman':
         coco_json = convert_to_coco(merged_result, gt_js)
         json.dump(coco_json, open('test.json','w'), ensure_ascii=True)
+        odgt_file = os.path.join(config['data']['dataset_root'], config['data']['odgt_file'])
 
         eval_cmd = f"python tools/crowdhuman_eval.py -d test.json -g {odgt_file} --remove_empty_gt --visible_flag"
        
     elif config['data']['dataset'] == 'coco':
         coco_json = convert_to_coco_in_list(merged_result)
         json.dump(coco_json, open('test.json','w'), ensure_ascii=True)
-        eval_cmd = f"python tools/coco_eval.py -d test.json -g {config['data']['json_file']}"
+        eval_cmd = f"python tools/coco_eval.py -d test.json -g {val_json_path}"
         print(f"Evaluating with command: {eval_cmd}")
     print(f"Evaluating with command: {eval_cmd}")
     result = subprocess.run(eval_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)  

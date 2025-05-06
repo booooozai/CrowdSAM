@@ -3,14 +3,26 @@ import json
 import os
 from pycocotools.coco import COCO
 from PIL import Image
+import numpy as np
 from .coco_names import coco_classes
 data_meta = {'crowdhuman':["./datasets/crowdhuman", 1, {1:'person'}],
              'occhuman':["./datasets/OCHuman", 1, {1:'person'}],
              'coco_occ':["./datasets/coco", 80, coco_classes],
              'coco':["./datasets/occ_coco", 80, coco_classes], 
              }
+
+def load_img_and_annotation(dataset_path, annots, dataset, id=0):
+  
+    #load image
+    image_cv = cv2.imread(img_path)
+    image_cv = cv2.cvtColor(image_cv, cv2.COLOR_BGR2RGB)
+    bboxes = np.array([ annot['bbox'] for annot in annots['annotations'] if annot['image_id'] ==img_meta['id']])
+    bboxes[...,2:] += bboxes[...,:2]
+    img_id = img_meta['id']    
+    return image_cv, bboxes, img_id 
+
 class COCODataset(torch.utils.data.Dataset):
-    def __init__(self, annotation_file, image_directory, transform=None):
+    def __init__(self,image_directory, annotation_file, transform=None):
         """
         Initialize COCO dataset
         
@@ -52,53 +64,36 @@ class COCODataset(torch.utils.data.Dataset):
         """
         image_id = self.image_ids[idx]
         image_info = self.coco.loadImgs(image_id)[0]
-        image_path = f"{self.image_directory}/train2017/{image_info['file_name']}"
+        image_path = f"{self.image_directory}/{image_info['file_name']}"
         image = Image.open(image_path)
 
         annotation_ids = self.coco.getAnnIds(imgIds=image_id)
         annotations = self.coco.loadAnns(annotation_ids)
-        
-        masks = [self.coco.annToMask(annotation) for annotation in annotations]
+        if 'segmentation' in annotations[0]:
+            masks = [self.coco.annToMask(annotation) for annotation in annotations]
+        else:
+            masks = None
+        boxes = [annotation['bbox'] for annotation in annotations]
+        boxes = np.array(boxes)
+        boxes[:, 2:] = boxes[:, :2] + boxes[:, 2:]
         category_ids = [self.mapping[annotation['category_id']] for annotation in annotations]
 
         sample = {
+            'image_id': image_id,
             'image': image,
             'masks': masks,
+            'boxes' : boxes, #xmin,ymin,xmax,ymax
             'categories': category_ids
         }
 
 
         return sample
 
-class CrowdHuman(torch.utils.data.Dataset):
-    def __init__(self, dataset_root, annot_path, transform):
-        self.dataset_root = dataset_root
-        self.transform = transform
-        img_dir = 'Images'        
-        annots = json.load(open( annot_path))
-        annotations = annots['annotations']
-        images = annots['images']
-        self.image_ids = [img['id'] for img in images]
-        self.boxes = {}
-        for annot in annotations:
-            image_id = int(annot['image_id'])
-            if image_id not in self.boxes.keys():
-                self.boxes[image_id] = []
-            self.boxes[image_id].append(annot['bbox'])
-        
-        self.image_files = [os.path.join(dataset_root, img_dir,img['file_name']) for img in images]    
-    def __getitem__(self, item):
-        img = Image.open(self.image_files[item])
-        w,h = img.size
-        boxes = torch.tensor(self.boxes[item])
-        boxes = boxes / torch.tensor([w,h,w,h]).unsqueeze(0)
-        boxes[:, 2:] = boxes[:, :2] + boxes[:, 2:]
-        return img, boxes
-    def __len__(self):
-        return len(self.image_files)
-    
+
 def collate_fn_crowdhuman(data):
-    images, boxes= zip(*data)
+    images = [d['image'] for d in  data]
+    boxes = [d['boxes'] for d in data]
+    # images,boxes, boxe_full= zip(*data.values())
     return images, boxes
 
 def collate_fn_coco(data):
