@@ -8,7 +8,7 @@ from tqdm import tqdm
 import numpy as np
 import torch
 from crowdsam.model import CrowdSAM
-from crowdsam.utils import (load_img_and_annotation, setup_logger,
+from crowdsam.utils import (setup_logger,
                     load_config, modify_config,
                 visualize_result,evaluate_boxes)
 from crowdsam.data import data_meta
@@ -31,7 +31,7 @@ def envrion_init():
 if __name__ == '__main__':
     #===========>init environments
     args, config, logger = envrion_init()
-    n_class, class_names = data_meta[config['data']['dataset']][1:]
+    class_names = data_meta[config['data']['dataset']]
     model = CrowdSAM(config, logger)
 
     #parse the input files
@@ -52,7 +52,7 @@ if __name__ == '__main__':
     save_path = os.path.join(args.output, time_str)
     os.makedirs(save_path, exist_ok=True)
     
-    for image_file in tqdm(image_files):
+    for image_file in tqdm(sorted(image_files)):
         # load one image
         image = Image.open(image_file)
         result = model.generate(image)

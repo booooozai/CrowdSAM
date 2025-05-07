@@ -59,7 +59,7 @@ if __name__ == '__main__':
     train_set_split = config['data']['train_set']
     trainset_path = os.path.join(data_root, train_set_split)
     train_json_path = os.path.join(data_root, config['data']['train_file'])
-    if config['data']['dataset'] == 'coco':
+    if config['data']['dataset'] in ['coco','coco_occ', 'cityscape']:
         torch.nn.init.constant_(predictor.model.mask_decoder.point_classifier.layers[-1].bias,-5)
         dataset = COCODataset( trainset_path, train_json_path,)
         train_dataloader = torch.utils.data.DataLoader(dataset, 1, shuffle=True, num_workers=1, drop_last=False,collate_fn=collate_fn_coco)

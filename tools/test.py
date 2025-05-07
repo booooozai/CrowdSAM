@@ -9,7 +9,7 @@ from crowdsam.model import CrowdSAM
 from crowdsam.data import data_meta
 from crowdsam.utils import (setup_logger, load_config, modify_config,
                    visualize_result,evaluate_boxes)
-from crowdsam.data import COCODataset,CrowdHuman
+from crowdsam.data import COCODataset
 import argparse
 def envrion_init():
     parser = argparse.ArgumentParser(description="CrowdSAM argparser")
@@ -53,7 +53,7 @@ if __name__ == '__main__':
     data_root = config['data']['dataset_root']
     valset_path = os.path.join(data_root,  config['data']['val_set'])
     val_json_path = os.path.join(data_root, config['data']['val_file'])
-    if config['data']['dataset'] == 'coco':
+    if config['data']['dataset'] in ['coco','cityscape', 'coco_occ']:
         dataset = COCODataset( valset_path, val_json_path, transform=None)
     elif config['data']['dataset'] == 'crowdhuman':
         dataset = COCODataset(valset_path, val_json_path, transform=None)

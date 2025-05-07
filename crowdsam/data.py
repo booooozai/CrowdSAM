@@ -5,10 +5,11 @@ from pycocotools.coco import COCO
 from PIL import Image
 import numpy as np
 from .coco_names import coco_classes
-data_meta = {'crowdhuman':["./datasets/crowdhuman", 1, {1:'person'}],
-             'occhuman':["./datasets/OCHuman", 1, {1:'person'}],
-             'coco_occ':["./datasets/coco", 80, coco_classes],
-             'coco':["./datasets/occ_coco", 80, coco_classes], 
+data_meta = {'crowdhuman':{1:'person'},
+             'occhuman': {1:'person'},
+             'coco_occ':coco_classes,
+             'coco':  coco_classes, 
+             'cityscape': {1:"person", 2:"rider", 3:"car", 4:"truck", 5:"bus", 6:"train", 7:"motorcycle", 8:"bicycle"}
              }
 
 def load_img_and_annotation(dataset_path, annots, dataset, id=0):
@@ -69,6 +70,17 @@ class COCODataset(torch.utils.data.Dataset):
 
         annotation_ids = self.coco.getAnnIds(imgIds=image_id)
         annotations = self.coco.loadAnns(annotation_ids)
+        if len(annotations)  == 0:
+            sample = {
+            'image_id': image_id,
+            'image': image,
+            'masks': None,
+            'boxes' : np.zeros((0,4)), #xmin,ymin,xmax,ymax
+            'categories': []
+            }
+            return sample
+
+
         if 'segmentation' in annotations[0]:
             masks = [self.coco.annToMask(annotation) for annotation in annotations]
         else:
