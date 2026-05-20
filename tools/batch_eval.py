@@ -133,16 +133,27 @@ def main():
     # # Merge JSON results
     json_list = [f"temp_result_{i}.json" for i in range(num_nodes)]
     merged_result = merge_json(json_list)
+    eval_json_path = os.path.join(config['environ']['output_dir'], 'test.json')
+    eval_record_path = os.path.join(config['environ']['output_dir'], 'record.txt')
     if config['data']['dataset'] == 'crowdhuman':
         coco_json = convert_to_coco(merged_result, gt_js)
-        json.dump(coco_json, open('test.json','w'), ensure_ascii=True)
+        json.dump(coco_json, open(eval_json_path, 'w'), ensure_ascii=True)
 
-        eval_cmd = f"python tools/crowdhuman_eval.py -d test.json -g {odgt_file} --remove_empty_gt --visible_flag"
+        eval_cmd = f"python tools/crowdhuman_eval.py -d {eval_json_path} -g {odgt_file} -o {eval_record_path} --remove_empty_gt --visible_flag"
        
+    elif config['data']['dataset'] == 'mot20':
+        coco_json = {
+            'images': gt_js['images'],
+            'annotations': convert_to_coco_in_list(merged_result),
+            'categories': gt_js['categories'],
+        }
+        json.dump(coco_json, open(eval_json_path, 'w'), ensure_ascii=True)
+        eval_cmd = f"python tools/crowdhuman_eval.py -d {eval_json_path} -g {config['data']['json_file']} -o {eval_record_path}"
+
     elif config['data']['dataset'] == 'coco':
         coco_json = convert_to_coco_in_list(merged_result)
-        json.dump(coco_json, open('test.json','w'), ensure_ascii=True)
-        eval_cmd = f"python tools/coco_eval.py -d test.json -g {config['data']['json_file']}"
+        json.dump(coco_json, open(eval_json_path, 'w'), ensure_ascii=True)
+        eval_cmd = f"python tools/coco_eval.py -d {eval_json_path} -g {config['data']['json_file']}"
     log_and_print(log_path, f"Evaluating with command: {eval_cmd}")
     result = subprocess.run(eval_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)  
     eval_stdout = result.stdout.decode()
@@ -151,7 +162,8 @@ def main():
     eval_stderr = result.stderr.decode()
     if eval_stderr:
         log_and_print(log_path, eval_stderr)
-    # os.remove("test.json")
+    if os.path.exists(eval_json_path):
+        os.remove(eval_json_path)
     log_and_print(log_path, "All processes done")
     log_and_print(log_path, f'Elapsed time: {time.time() - t0}')
 if __name__ == "__main__":

@@ -392,31 +392,22 @@ class Database(object):
         print(fpath, if_gt)
         records = json.load(open(fpath))
         annots = records['annotations']
-        #assert img id in increasing order and the img id in annotations is contigunous
-        #we contigunously iterate all annotations and split them by image ids
-        #assert no duplicate in image ids
         image_ids = [item['id'] for item in records['images']]
         assert len(image_ids) == len(set(image_ids))
-        annot_id = 0
-        # sorted_images =  sorted(records['images'],key=lambda x:int(x['id']))
+        annots_by_image = {image_id: [] for image_id in image_ids}
+        for annot in annots:
+            image_id = annot['image_id']
+            if image_id in annots_by_image:
+                annots_by_image[image_id].append(annot)
+
         for img_item in records['images']:
-            #convert all img ids to integers to avoid confilits between string ids and integer ids
-            image_id =(img_item['id'])
-            k = 0
-            while True:
-                if annot_id + k==len(annots) or (annots[annot_id +k]['image_id']) != image_id:
-                    break
-                else:
-                    k += 1
-            #initialize save result
+            image_id = img_item['id']
             if if_gt:
                 self.images[image_id] = Image(self.eval_mode)
-            #load coco format result
-            self.images[image_id].load_cocojson(img_item, annots[annot_id:annot_id+k], if_gt)
+            self.images[image_id].load_cocojson(img_item, annots_by_image.get(image_id, []), if_gt)
 
             if not if_gt:
                 self.images[image_id].clip_all_boader()
-            annot_id += k
         
     def loadData_odgt(self, fpath, body_key=None, head_key=None, visible_flag=False):
         assert os.path.isfile(fpath), fpath + " does not exist!"

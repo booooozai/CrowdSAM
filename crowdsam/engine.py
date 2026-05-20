@@ -1,3 +1,5 @@
+import os
+
 import torch
 from loguru import logger
 import tqdm
@@ -253,6 +255,8 @@ def train_loop(data_loader,  predictor, optimizer, max_steps=3000, n_shot=10, in
             from detectron2.utils.visualizer import Visualizer
             from detectron2.data import MetadataCatalog
             from detectron2.structures import Instances, Boxes, BitMasks
+            debug_output_dir = "outputs/sam_adapter_debug"
+            os.makedirs(debug_output_dir, exist_ok=True)
 
             # 创建 metadata（你也可以注册自己的 dataset）
             coco_metadata = MetadataCatalog.get("coco_2017_val")   # or create a dummy one
@@ -269,7 +273,7 @@ def train_loop(data_loader,  predictor, optimizer, max_steps=3000, n_shot=10, in
                 visualizer = Visualizer(image_np, metadata=coco_metadata, scale=1.0)
                 vis_output = visualizer.draw_sem_seg(cls_labels.int())
                 # 保存或显示
-                vis_output.save(f"outputs/sam_adapter_debug/{step}_cls_vis.jpg")
+                vis_output.save(f"{debug_output_dir}/{step}_cls_vis.jpg")
                 
                 low_res_masks= low_res_masks.cpu()
                 pred_iou_conf,select_mask = iou_predictions.cpu().max(dim=1)
@@ -297,7 +301,7 @@ def train_loop(data_loader,  predictor, optimizer, max_steps=3000, n_shot=10, in
                 # 可选：创建伪 bbox（用于可视化）
                 visualizer = Visualizer(image_np, metadata=coco_metadata, scale=1.0)
                 vis_output = visualizer.draw_instance_predictions(instances)
-                vis_output.save(f"outputs/sam_adapter_debug/{step}_cls_inst_vis.jpg")
+                vis_output.save(f"{debug_output_dir}/{step}_cls_inst_vis.jpg")
 
         # Compute the total loss
         optimizer.zero_grad()  

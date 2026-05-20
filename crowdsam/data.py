@@ -7,7 +7,8 @@ from .coco_names import coco_classes
 data_meta = {'crowdhuman':["./datasets/crowdhuman", 1, {1:'person'}],
              'occhuman':["./datasets/OCHuman", 1, {1:'person'}],
              'coco_occ':["./datasets/coco", 80, coco_classes],
-             'coco':["./datasets/occ_coco", 80, coco_classes], 
+             'coco':["./datasets/occ_coco", 80, coco_classes],
+             'mot20':["./dataset/mot20", 1, {1:'pedestrian'}],
              }
 class COCODataset(torch.utils.data.Dataset):
     def __init__(self, annotation_file, image_directory, transform=None):
@@ -74,26 +75,73 @@ class CrowdHuman(torch.utils.data.Dataset):
     def __init__(self, dataset_root, annot_path, transform):
         self.dataset_root = dataset_root
         self.transform = transform
-        img_dir = 'Images'        
+        img_dir = 'Images'
         annots = json.load(open( annot_path))
         annotations = annots['annotations']
         images = annots['images']
-        self.image_ids = [img['id'] for img in images]
+        self.image_ids = [int(img['id']) for img in images]
         self.boxes = {}
         for annot in annotations:
             image_id = int(annot['image_id'])
             if image_id not in self.boxes.keys():
                 self.boxes[image_id] = []
             self.boxes[image_id].append(annot['bbox'])
-        
-        self.image_files = [os.path.join(dataset_root, img_dir,img['file_name']) for img in images]    
+
+        annot_image_dir = os.path.join(os.path.dirname(annot_path), img_dir)
+        self.image_files = []
+        for img in images:
+            image_file = os.path.join(dataset_root, img_dir, img['file_name'])
+            if not os.path.exists(image_file):
+                image_file = os.path.join(annot_image_dir, img['file_name'])
+            self.image_files.append(image_file)
+
     def __getitem__(self, item):
         img = Image.open(self.image_files[item])
         w,h = img.size
-        boxes = torch.tensor(self.boxes[item])
-        boxes = boxes / torch.tensor([w,h,w,h]).unsqueeze(0)
-        boxes[:, 2:] = boxes[:, :2] + boxes[:, 2:]
+        image_id = self.image_ids[item]
+        boxes = torch.tensor(self.boxes.get(image_id, []), dtype=torch.float32)
+        if boxes.numel() == 0:
+            boxes = torch.zeros((0, 4), dtype=torch.float32)
+        else:
+            boxes = boxes / torch.tensor([w,h,w,h]).unsqueeze(0)
+            boxes[:, 2:] = boxes[:, :2] + boxes[:, 2:]
+            boxes = boxes.clamp(0, 1)
         return img, boxes
+    def __len__(self):
+        return len(self.image_files)
+
+class MOT20(torch.utils.data.Dataset):
+    def __init__(self, dataset_root, annot_path, transform):
+        self.dataset_root = dataset_root
+        self.transform = transform
+        annots = json.load(open(annot_path))
+        annotations = annots['annotations']
+        images = annots['images']
+        self.image_ids = [int(img['id']) for img in images]
+        self.boxes = {}
+        for annot in annotations:
+            image_id = int(annot['image_id'])
+            if image_id not in self.boxes.keys():
+                self.boxes[image_id] = []
+            self.boxes[image_id].append(annot['bbox'])
+
+        self.image_files = [
+            os.path.join(dataset_root, 'train', img['file_name']) for img in images
+        ]
+
+    def __getitem__(self, item):
+        img = Image.open(self.image_files[item])
+        w, h = img.size
+        image_id = self.image_ids[item]
+        boxes = torch.tensor(self.boxes.get(image_id, []), dtype=torch.float32)
+        if boxes.numel() == 0:
+            boxes = torch.zeros((0, 4), dtype=torch.float32)
+        else:
+            boxes = boxes / torch.tensor([w, h, w, h]).unsqueeze(0)
+            boxes[:, 2:] = boxes[:, :2] + boxes[:, 2:]
+            boxes = boxes.clamp(0, 1)
+        return img, boxes
+
     def __len__(self):
         return len(self.image_files)
     
@@ -107,4 +155,3 @@ def collate_fn_coco(data):
     categories = [d['categories'] for d in data]
     # images,boxes, boxe_full= zip(*data.values())
     return images, masks, categories
-

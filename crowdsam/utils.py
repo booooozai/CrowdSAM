@@ -383,13 +383,20 @@ def load_img_and_annotation(dataset_path, annots, dataset, id=0):
         img_path = os.path.join(dataset_path,'images', img_meta['file_name'])
     elif dataset == 'mineapple':
         img_path = os.path.join(dataset_path,'images', img_meta['file_name'])
+    elif dataset == 'mot20':
+        img_path = os.path.join(dataset_path, 'train', img_meta['file_name'])
     else:
         raise NotImplementedError
     #load image
     image_cv = cv2.imread(img_path)
+    if image_cv is None:
+        raise FileNotFoundError(f'Image not found: {img_path}')
     image_cv = cv2.cvtColor(image_cv, cv2.COLOR_BGR2RGB)
     bboxes = np.array([ annot['bbox'] for annot in annots['annotations'] if annot['image_id'] ==img_meta['id']])
-    bboxes[...,2:] += bboxes[...,:2]
+    if len(bboxes) == 0:
+        bboxes = np.zeros((0, 4))
+    else:
+        bboxes[...,2:] += bboxes[...,:2]
     img_id = img_meta['id']    
     return image_cv, bboxes, img_id 
 

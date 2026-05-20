@@ -78,7 +78,7 @@ python tools/crowdhuman2coco.py -o annotation_val.odgt -v -s val_visible.json -d
 1.  To start training the model, run the following command:
 
 ```bash
-python train.py --config_file ./configs/crowdhuman.yaml
+python tools/train.py --config_file ./configs/crowdhuman.yaml --debug
 ```
 
 Our model configs are written with yaml in the _configs_ directory. Make sure to update the `config.yaml` file with the appropriate paths and parameters as needed.
