@@ -6,7 +6,15 @@ import json
 import yaml
 import crowdsam.utils as utils
 import time
-def run_script(start_idx, end_idx, rank, exec_file,config_file, options):
+
+def log_and_print(log_path, message):
+    print(message)
+    with open(log_path, 'a') as f:
+        f.write(str(message))
+        if not str(message).endswith('\n'):
+            f.write('\n')
+
+def run_script(start_idx, end_idx, rank, exec_file, config_file, options, log_path, log_file):
     cmd = [
         'python', exec_file, 
         '--config_file', config_file,
@@ -15,8 +23,10 @@ def run_script(start_idx, end_idx, rank, exec_file,config_file, options):
         '--end_idx', str(end_idx),
         '--local_rank', str(rank),
     ] + options
-    print(f"Running command: {' '.join(cmd)}")
-    subprocess.run(cmd)
+    log_and_print(log_path, f"Running command: {' '.join(cmd)}")
+    env = os.environ.copy()
+    env['CROWDSAM_LOG_FILE'] = log_file
+    subprocess.run(cmd, check=True, env=env)
 
 def merge_json(json_files):    # Initialize an empty list to hold merged data
     merged_data = []
@@ -88,7 +98,12 @@ def main():
     args = parser.parse_args()
     config = utils.load_config(args.config_file)
     config = utils.modify_config(config, args.options)
-    print(yaml.dump(config, default_flow_style=False, default_style='' ))
+    log_file = f'{utils.timestamp_to_datetime(time.time())}.log'
+    os.environ['CROWDSAM_LOG_FILE'] = log_file
+    log_dir = os.path.join(config['environ']['output_dir'], 'log')
+    os.makedirs(log_dir, exist_ok=True)
+    log_path = os.path.join(log_dir, log_file)
+    log_and_print(log_path, yaml.dump(config, default_flow_style=False, default_style='' ))
     #load yaml
     gt_js = json.load(open(config['data']['json_file']))
     num_imgs = len(gt_js['images'])
@@ -110,9 +125,10 @@ def main():
                 end_idx = num_imgs
             else:
                 end_idx = (i + 1) * batch_size 
-            futures.append(executor.submit(run_script, start_idx, end_idx, i, exec_file, config_file, args.options))
+            futures.append(executor.submit(run_script, start_idx, end_idx, i, exec_file, config_file, args.options, log_path, log_file))
     #     # Wait for all futures to complete
-        concurrent.futures.wait(futures)
+        for future in concurrent.futures.as_completed(futures):
+            future.result()
 
     # # Merge JSON results
     json_list = [f"temp_result_{i}.json" for i in range(num_nodes)]
@@ -127,12 +143,16 @@ def main():
         coco_json = convert_to_coco_in_list(merged_result)
         json.dump(coco_json, open('test.json','w'), ensure_ascii=True)
         eval_cmd = f"python tools/coco_eval.py -d test.json -g {config['data']['json_file']}"
-        print(f"Evaluating with command: {eval_cmd}")
-    print(f"Evaluating with command: {eval_cmd}")
+    log_and_print(log_path, f"Evaluating with command: {eval_cmd}")
     result = subprocess.run(eval_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)  
-    print(result.stdout.decode())
+    eval_stdout = result.stdout.decode()
+    if eval_stdout:
+        log_and_print(log_path, eval_stdout)
+    eval_stderr = result.stderr.decode()
+    if eval_stderr:
+        log_and_print(log_path, eval_stderr)
     # os.remove("test.json")
-    print("All processes done")
-    print('Elapsed time:', time.time() - t0)
+    log_and_print(log_path, "All processes done")
+    log_and_print(log_path, f'Elapsed time: {time.time() - t0}')
 if __name__ == "__main__":
     main()

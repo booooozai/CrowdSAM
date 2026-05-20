@@ -2,6 +2,9 @@
 import os
 import sys
 import json
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from tqdm import tqdm
 import numpy as np
 import torch
@@ -30,7 +33,11 @@ def envrion_init():
     torch.random.manual_seed(configs['environ']['seed'])
     os.makedirs(configs['environ']['output_dir'], exist_ok=True)
     os.makedirs(configs['environ']['output_dir'] + '/log', exist_ok=True)
-    logger = setup_logger(configs['environ']['output_dir'] + '/log') 
+    quiet = configs['environ'].get('quiet', False)
+    logger = setup_logger(
+        configs['environ']['output_dir'] + '/log',
+        quiet=quiet,
+    )
     logger.info(args)
     return args, configs, logger
 
@@ -42,14 +49,15 @@ if __name__ == '__main__':
     n_class, class_names = data_meta[config['data']['dataset']][1:]
     if 'cuda' in config['environ']['device']:
         torch.cuda.set_device(args.local_rank) 
-        print(f'set device cuda:{args.local_rank}')
+        if not config['environ'].get('quiet', False):
+            print(f'set device cuda:{args.local_rank}')
         config['environ']['device'] =  f'cuda:{args.local_rank}'
     #===========>configure model
     model = CrowdSAM(config, logger)
     # annot_path = os.path.join(dataset_path[args.dataset], args.label_file)
     annot_path = config['data']['json_file']
     #===========> A simple data loading strategy that can be replaced with a DDP dataloader in the future update.
-    logger.info('load images and annotations from crowdhuman dataset..')
+    logger.info(f"load images and annotations from {config['data']['dataset']} dataset..")
     annots = json.load(open(annot_path))
     if args.end_idx == -1:
         end_idx = len(annots['images'])
@@ -59,7 +67,8 @@ if __name__ == '__main__':
     #===========>run in loop and collect result
     output_content = []
     logger.info(f'total images  to process { len(image_ids)}')
-    for id_ in tqdm(image_ids):
+    show_progress = config['environ'].get('show_progress', not config['environ'].get('quiet', False))
+    for id_ in tqdm(image_ids, disable=not show_progress):
         logger.debug(f'start processing {id_}')
         # load one image
         image, gt_boxes, image_id = load_img_and_annotation(dataset_path, annots, config['data']['dataset'], id_)

@@ -33,7 +33,7 @@ train:
   save_path: "adapter_weights/10_shot.pth"
 test:
   output_rles: True
-  #cropping 
+  #cropping
   crop_n_layers: 0
   crop_nms_thresh: 0.7
   crop_overlap_ratio: 0.341 #512/1500
@@ -60,4 +60,3 @@ test:
 
 vis:
   vis_thresh: 0.3
-

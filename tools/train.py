@@ -10,11 +10,12 @@ import torchvision.transforms as T
 
 import numpy as np
 import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 # from utils import draw_mask,draw_point,draw_box
 from segment_anything_cs import sam_model_registry, SamPredictor
 from loguru import logger
 import crowdsam.utils as utils
-from crowdsam.data import COCODataset, collate_fn_coco, CrowdHuman, collate_fn_crowdhuman
+from crowdsam.data import COCODataset, collate_fn_coco, CrowdHuman, MOT20, collate_fn_crowdhuman
 from crowdsam.engine import train_loop
 
 
@@ -25,6 +26,10 @@ if __name__ == '__main__':
     parser.add_argument('--debug', action='store_true')
     args = parser.parse_args()
     config = utils.load_config(args.config_file)
+    os.makedirs(config['environ']['output_dir'], exist_ok=True)
+    logger = utils.setup_logger(
+        os.path.join(config['environ']['output_dir'], 'log'),
+    )
     #fixed config
     model_arch = 'dino'
     mode = 'training'
@@ -61,6 +66,9 @@ if __name__ == '__main__':
         train_dataloader = torch.utils.data.DataLoader(dataset, 1, shuffle=True, num_workers=1, drop_last=False,collate_fn=collate_fn_coco)
     elif config['data']['dataset'] == 'crowdhuman':
         dataset = CrowdHuman(config['data']['dataset_root'], config['data']['train_file'], transform=T.ToTensor())
+        train_dataloader = torch.utils.data.DataLoader(dataset, 1, shuffle=True, num_workers=1, drop_last=False,collate_fn=collate_fn_crowdhuman)
+    elif config['data']['dataset'] == 'mot20':
+        dataset = MOT20(config['data']['dataset_root'], config['data']['train_file'], transform=T.ToTensor())
         train_dataloader = torch.utils.data.DataLoader(dataset, 1, shuffle=True, num_workers=1, drop_last=False,collate_fn=collate_fn_crowdhuman)
 
     loss_type = 'coco' if config['data']['dataset'] == 'coco' else 'crowdhuman'

@@ -165,9 +165,14 @@ def setup_logger(save_path, quiet=False):
     from loguru import logger
     import sys
     logger.remove()
-    logger.add(f'{save_path}/{timestamp_to_datetime(time.time())}.log', format="{time}-{level}-{message}", filter="my_module",
+    os.makedirs(save_path, exist_ok=True)
+    log_file = os.environ.get('CROWDSAM_LOG_FILE')
+    if not log_file:
+        log_file = f'{timestamp_to_datetime(time.time())}.log'
+    logger.add(os.path.join(save_path, log_file), format="{time}-{level}-{message}",
                 retention="10 days", level="DEBUG")
-    logger.add(sys.stdout, format="{time}-{level}-{message}", filter="my_module", level="INFO")
+    if not quiet:
+        logger.add(sys.stdout, format="{time}-{level}-{message}", level="INFO")
     return logger
 
 #box utils
